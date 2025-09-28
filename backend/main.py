@@ -34,7 +34,7 @@ print(f"Using device: {device}")
 
 # Model configuration
 NUM_CLASSES = 2
-MODEL_PATH = "resnet50_deepfake_finetuned_continue.pth"
+MODEL_PATH = "best_resnet50_f1.pth"
 
 # Image transforms (matching the training configuration)
 transform = transforms.Compose([
@@ -49,16 +49,30 @@ def load_model():
         # Load pretrained ResNet50
         model = models.resnet50(pretrained=False)
 
-        # Replace the final fully connected layer
+        # Replace the final fully connected layer to match training architecture
+        in_f = model.fc.in_features
         model.fc = nn.Sequential(
-            nn.Linear(model.fc.in_features, 512),
-            nn.ReLU(),
+            nn.Linear(in_f, 1024),
+            nn.BatchNorm1d(1024),
+            nn.ReLU(inplace=True),
             nn.Dropout(0.5),
+            nn.Linear(1024, 512),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.4),
             nn.Linear(512, NUM_CLASSES)
         )
 
         # Load the trained weights
-        model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
+        if os.path.exists(MODEL_PATH):
+            sd = torch.load(MODEL_PATH, map_location=device, weights_only=False)
+            if "model_state" in sd:
+                model.load_state_dict(sd["model_state"])
+                print("Loaded checkpoint dict -> model_state")
+            else:
+                model.load_state_dict(sd)
+                print("Loaded plain state_dict")
+        else:
+            raise FileNotFoundError(f"Checkpoint {MODEL_PATH} not found")
         model = model.to(device)
         model.eval()
 
