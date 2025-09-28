@@ -547,7 +547,7 @@ function resetAll() {
     resultsSection.style.display = 'none';
 }
 
-// Add reset button to results
+// Add reset button to results and create security particles
 document.addEventListener('DOMContentLoaded', () => {
     const resultsCard = document.querySelector('.results-card');
     if (resultsCard) {
@@ -557,5 +557,15 @@ document.addEventListener('DOMContentLoaded', () => {
         resetBtn.onclick = resetAll;
         resetBtn.style.marginTop = '20px';
         resultsCard.appendChild(resetBtn);
+    }
+
+    // Create floating security particles
+    for (let i = 0; i < 25; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'security-particle';
+        particle.style.left = Math.random() * 100 + 'vw';
+        particle.style.animationDelay = Math.random() * 10 + 's';
+        particle.style.animationDuration = (10 + Math.random() * 5) + 's';
+        document.body.appendChild(particle);
     }
 });
