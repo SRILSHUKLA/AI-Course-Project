@@ -13,8 +13,7 @@ import librosa
 import numpy as np
 from transformers import pipeline
 import cv2
-
-
+from huggingface_hub import hf_hub_download
 app = FastAPI(title="Deepfake Detection System", description="AI-powered deepfake detection using ResNet50")
 
 # CORS middleware for frontend integration
@@ -35,7 +34,14 @@ print(f"Using device: {device}")
 
 # Model configuration
 NUM_CLASSES = 2
-MODEL_PATH = "best_resnet50_f1.pth"
+
+
+# Download your custom model weights from Hugging Face Hub
+MODEL_REPO = "srilshukla/deepfake-detector-models"
+MODEL_FILE = "best_resnet50_f1.pth"
+
+MODEL_PATH = hf_hub_download(repo_id=MODEL_REPO, filename=MODEL_FILE)
+
 
 # Image transforms (matching the training configuration)
 transform = transforms.Compose([
