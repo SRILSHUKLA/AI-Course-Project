@@ -18,13 +18,24 @@ const audioPreviewSection = document.getElementById('audioPreviewSection');
 const audioFileName = document.getElementById('audioFileName');
 const analyzeAudioBtn = document.getElementById('analyzeAudioBtn');
 
+// Video elements
+const videoUploadBox = document.getElementById('videoUploadBox');
+const videoFileInput = document.getElementById('videoFileInput');
+const videoUploadBtn = document.getElementById('videoUploadBtn');
+const videoPreviewSection = document.getElementById('videoPreviewSection');
+const previewVideo = document.getElementById('previewVideo');
+const videoFileName = document.getElementById('videoFileName');
+const analyzeVideoBtn = document.getElementById('analyzeVideoBtn');
+
 // Tab elements
 const tabButtons = document.querySelectorAll('.tab-button');
 const imageTab = document.getElementById('image-tab');
 const audioTab = document.getElementById('audio-tab');
+const videoTab = document.getElementById('video-tab');
 
 let selectedFile = null;
 let selectedAudioFile = null;
+let selectedVideoFile = null;
 
 // Event listeners
 uploadBtn.addEventListener('click', () => fileInput.click());
@@ -68,13 +79,20 @@ tabButtons.forEach(button => {
         if (tab === 'image') {
             imageTab.style.display = 'block';
             audioTab.style.display = 'none';
-        } else {
+            videoTab.style.display = 'none';
+        } else if (tab === 'audio') {
             imageTab.style.display = 'none';
             audioTab.style.display = 'block';
+            videoTab.style.display = 'none';
+        } else if (tab === 'video') {
+            imageTab.style.display = 'none';
+            audioTab.style.display = 'none';
+            videoTab.style.display = 'block';
         }
         // Reset when switching tabs
         resetApp();
         resetAudioApp();
+        resetVideoApp();
     });
 });
 
@@ -109,6 +127,38 @@ audioUploadBox.addEventListener('click', () => {
 });
 
 analyzeAudioBtn.addEventListener('click', analyzeAudio);
+
+// Video event listeners
+videoUploadBtn.addEventListener('click', () => videoFileInput.click());
+videoFileInput.addEventListener('change', handleVideoFileSelect);
+
+// Video drag and drop
+videoUploadBox.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    videoUploadBox.classList.add('dragover');
+});
+
+videoUploadBox.addEventListener('dragleave', () => {
+    videoUploadBox.classList.remove('dragover');
+});
+
+videoUploadBox.addEventListener('drop', (e) => {
+    e.preventDefault();
+    videoUploadBox.classList.remove('dragover');
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        handleVideoFileSelect({ target: { files } });
+    }
+});
+
+videoUploadBox.addEventListener('click', () => {
+    if (!selectedVideoFile) {
+        videoFileInput.click();
+    }
+});
+
+analyzeVideoBtn.addEventListener('click', analyzeVideo);
 
 // Handle audio file selection
 function handleAudioFileSelect(event) {
@@ -217,6 +267,109 @@ function resetAudioApp() {
     audioUploadBox.style.display = 'block';
     audioPreviewSection.style.display = 'none';
     audioFileInput.value = '';
+}
+
+// Handle video file selection
+function handleVideoFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('video/')) {
+        showNotification('Please select a valid video file.', 'error');
+        return;
+    }
+
+    // Validate file size (max 100MB for video)
+    if (file.size > 100 * 1024 * 1024) {
+        showNotification('File size must be less than 100MB.', 'error');
+        return;
+    }
+
+    selectedVideoFile = file;
+    displayVideoPreview(file);
+}
+
+// Display video preview
+function displayVideoPreview(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        previewVideo.src = e.target.result;
+        videoFileName.textContent = `Selected file: ${file.name}`;
+        videoUploadBox.style.display = 'none';
+        videoPreviewSection.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+}
+
+// Analyze video
+async function analyzeVideo() {
+    if (!selectedVideoFile) return;
+
+    // Show loading state
+    analyzeVideoBtn.disabled = true;
+    analyzeVideoBtn.innerHTML = '<div class="loading"></div> Analyzing...';
+
+    try {
+        const formData = new FormData();
+        formData.append('file', selectedVideoFile);
+
+        const response = await fetch('/predict_video', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        displayVideoResults(result);
+
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error analyzing video. Please try again.', 'error');
+    } finally {
+        // Reset loading state
+        analyzeVideoBtn.disabled = false;
+        analyzeVideoBtn.innerHTML = 'Analyze Video';
+    }
+}
+
+// Display video results
+function displayVideoResults(result) {
+    videoPreviewSection.style.display = 'none';
+    resultsSection.style.display = 'block';
+
+    const { prediction, confidence, status } = result;
+
+    // Create result HTML
+    predictionResult.innerHTML = `
+        <div class="result-text ${status === 'warning' ? 'result-fake' : 'result-real'}">
+            ${prediction}
+        </div>
+        <div class="result-details">
+            ${status === 'warning'
+                ? '⚠️ Deepfake detected! This video appears to be artificially generated.'
+                : '✅ This video appears to be authentic and not a deepfake.'
+            }
+        </div>
+    `;
+
+    // Update confidence meter
+    confidenceFill.style.width = `${confidence}%`;
+    confidenceValue.textContent = `${confidence}%`;
+
+    // Scroll to results
+    resultsSection.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Reset video functionality
+function resetVideoApp() {
+    selectedVideoFile = null;
+    videoUploadBox.style.display = 'block';
+    videoPreviewSection.style.display = 'none';
+    videoFileInput.value = '';
 }
 
 // Handle file selection
@@ -390,6 +543,7 @@ function resetApp() {
 function resetAll() {
     resetApp();
     resetAudioApp();
+    resetVideoApp();
     resultsSection.style.display = 'none';
 }
 

@@ -12,6 +12,7 @@ from pathlib import Path
 import librosa
 import numpy as np
 from transformers import pipeline
+import cv2
 
 
 app = FastAPI(title="Deepfake Detection System", description="AI-powered deepfake detection using ResNet50")
@@ -135,6 +136,7 @@ async def root():
                 <div class="tabs">
                     <button class="tab-button active" data-tab="image">Image Detection</button>
                     <button class="tab-button" data-tab="audio">Audio Detection</button>
+                    <button class="tab-button" data-tab="video">Video Detection</button>
                 </div>
 
                 <div class="tab-content" id="image-tab">
@@ -183,6 +185,32 @@ async def root():
                                 <p id="audioFileName">Selected file: </p>
                             </div>
                             <button id="analyzeAudioBtn" class="btn-primary">Analyze Audio</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="video-tab" style="display: none;">
+                    <div class="upload-section">
+                        <div class="upload-box" id="videoUploadBox">
+                            <div class="upload-icon">
+                                <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="8" y="8" width="48" height="48" rx="4" stroke="#4A90E2" stroke-width="3" fill="none"/>
+                                    <circle cx="32" cy="32" r="16" fill="#4A90E2" opacity="0.3"/>
+                                    <polygon points="28,24 28,40 40,32" fill="#4A90E2"/>
+                                </svg>
+                            </div>
+                            <h3>Upload Video for Analysis</h3>
+                            <p>Drag and drop a video file here or click to browse</p>
+                            <input type="file" id="videoFileInput" accept="video/*" hidden>
+                            <button id="videoUploadBtn" class="btn-primary">Choose File</button>
+                        </div>
+
+                        <div class="preview-section" id="videoPreviewSection" style="display: none;">
+                            <div class="video-preview">
+                                <video id="previewVideo" controls style="max-width: 100%; height: auto;"></video>
+                                <p id="videoFileName">Selected file: </p>
+                            </div>
+                            <button id="analyzeVideoBtn" class="btn-primary">Analyze Video</button>
                         </div>
                     </div>
                 </div>
@@ -312,6 +340,99 @@ async def predict_audio(file: UploadFile = File(...)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing audio: {str(e)}")
+
+@app.post("/predict_video")
+async def predict_video(file: UploadFile = File(...)):
+    try:
+        # Validate file type
+        if not file.content_type.startswith('video/'):
+            raise HTTPException(status_code=400, detail="File must be a video")
+
+        # Read video contents
+        contents = await file.read()
+
+        # Save to temporary file
+        import tempfile
+        import os
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as temp_file:
+            temp_file.write(contents)
+            temp_filename = temp_file.name
+
+        cap = cv2.VideoCapture(temp_filename)
+
+        if not cap.isOpened():
+            raise HTTPException(status_code=400, detail="Invalid video file")
+
+        # Get video properties
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        duration = frame_count / fps if fps > 0 else 0
+
+        # Determine number of frames to extract (proportional to duration, min 10, max 200)
+        num_frames = min(200, max(10, int(duration * 2)))  # ~2 frames per second
+        frame_interval = max(1, frame_count // num_frames)
+
+        fake_probs = []
+        frame_idx = 0
+        extracted_frames = 0
+
+        while extracted_frames < num_frames:
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            if frame_idx % frame_interval == 0:
+                # Convert BGR to RGB
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                image = Image.fromarray(frame_rgb)
+
+                # Apply transforms
+                image_tensor = transform(image).unsqueeze(0).to(device)
+
+                # Make prediction
+                with torch.no_grad():
+                    outputs = model(image_tensor)
+                    probabilities = torch.nn.functional.softmax(outputs, dim=1)
+                    fake_prob = probabilities[0][1].item()  # Prob of class 0 (FAKE)
+                    fake_probs.append(fake_prob)
+
+                extracted_frames += 1
+
+            frame_idx += 1
+
+        cap.release()
+
+        if not fake_probs:
+            raise HTTPException(status_code=400, detail="No frames extracted from video")
+
+        # Average fake probabilities
+        avg_fake_prob = sum(fake_probs) / len(fake_probs)
+
+        # Determine result
+        if avg_fake_prob > 0.5:
+            result = "FAKE (Deepfake Detected)"
+            status = "warning"
+            confidence_value = avg_fake_prob * 100
+        else:
+            result = "REAL"
+            status = "verified"
+            confidence_value = (1-avg_fake_prob) * 100
+
+        # Clean up temporary file
+        if os.path.exists(temp_filename):
+            os.unlink(temp_filename)
+
+        return {
+            "prediction": result,
+            "confidence": round(confidence_value, 2),
+            "status": status
+        }
+
+    except Exception as e:
+        # Clean up temporary file in case of error
+        if 'temp_filename' in locals() and os.path.exists(temp_filename):
+            os.unlink(temp_filename)
+        raise HTTPException(status_code=500, detail=f"Error processing video: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

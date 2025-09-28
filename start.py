@@ -15,7 +15,7 @@ def main():
     print("📁 Checking files...")
 
     # Check if model file exists
-    if not Path("resnet50_deepfake_finetuned_continue.pth").exists():
+    if not Path("best_resnet50_f1.pth").exists():
         print("❌ Error: Model file 'resnet50_deepfake_finetuned_continue.pth' not found!")
         print("   Please ensure the trained model file is in the deepfake_detector directory.")
         sys.exit(1)
