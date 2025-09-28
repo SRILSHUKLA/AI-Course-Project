@@ -152,7 +152,7 @@ function App() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const API_BASE = 'https://your-username-your-space-name.hf.space';
+      const API_BASE = 'https://srilshukla-deep-defend-backend.hf.space';
       let endpoint = `${API_BASE}/predict`;
       if (activeTab === 'audio') {
         endpoint = `${API_BASE}/predict_audio`;
