@@ -155,7 +155,7 @@ function App() {
       const API_BASE = 'https://srilshukla-deep-defend-backend.hf.space';
       let endpoint = `${API_BASE}/predict`;
       if (activeTab === 'audio') {
-        endpoint = `${API_BASE}/predict_audio`;
+        endpoint = `https://srilshukla-deep-defend-audio.hf.space/predict_audio`;
       } else if (activeTab === 'video') {
         endpoint = `${API_BASE}/predict_video`;
       }
