@@ -114,7 +114,7 @@ The application features three tabs for different media types: Image, Audio, and
 3. **Analyze**:
    - Click "Analyze Image".
 4. **View results**:
-   - "REAL" (green) or "FAKE (Deepfake Detected)" (red) with confidence percentage.
+   - "REAL" (Green) or "FAKE (Deepfake Detected)" (Red) with confidence percentage.
 
 ### Audio Detection
 
@@ -180,8 +180,8 @@ The navy blue theme can be customized in `frontend/src/App.css`:
 
 - Primary color: `#4A90E2`
 - Background gradients: `#1a1a2e`, `#16213e`, `#0f3460`
-- Real results: `#4CAF50` (green)
-- Fake results: `#f44336` (red)
+- Real results: `#4CAF50` (Green)
+- Fake results: `#f44336` (Red)
 
 ### Model Configuration
 
