@@ -1,7 +1,15 @@
 # Deepfake Detection System
 
 An AI-powered web application for detecting deepfakes in images, audio, and videos. Uses a fine-tuned ResNet50 model for visual content (images and video frames), and a wav2vec2-based model for audio. Features a modern React frontend with a sleek navy blue theme and security motifs, backed by a FastAPI backend.
+# Model Curves:
+<img width="1157" height="475" alt="image" src="https://github.com/user-attachments/assets/cf69ae0f-c4af-4287-b57d-3ffa9011d2a7" />
 
+# Confusion Matrix:
+<img width="791" height="653" alt="image" src="https://github.com/user-attachments/assets/6a53a241-479d-4b36-96ce-2d4a634ab5ec" />
+
+# Dataset used:
+- Audio Deepfakes: https://www.kaggle.com/datasets/abdallamohamed312/in-the-wild-audio-deepfake/data
+- Image Deepfakes: https://www.kaggle.com/datasets/manjilkarki/deepfake-and-real-images
 ## Features
 
 - 🛡️ **Multi-Modal AI Detection**:
